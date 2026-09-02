@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sikar Pet Shop — 3D Product Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root {
+    --bg: #FAF3E4;
+    --bg-alt: #F1E4C8;
+    --ink: #2B2013;
+    --ink-soft: #5C4E39;
+    --forest: #2F5233;
+    --forest-dark: #203a25;
+    --mustard: #E2A63B;
+    --clay: #AE4E2C;
+    --line: #D8C9A3;
+    --card: #FFFDF6;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Karla', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    color: var(--forest-dark);
+    margin: 0;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  img, svg { display: block; max-width: 100%; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* Header */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .brand-text {
+    line-height: 1.05;
+  }
+
+  .brand-text .name {
+    font-family: 'Fredoka';
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--forest-dark);
+  }
+
+  .brand-text .tag {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    letter-spacing: .02em;
+  }
+
+  /* 3D Viewer Container */
+  .viewer-section {
+    padding: 40px 0;
+  }
+
+  .viewer-wrapper {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  @media (max-width: 1024px) {
+    .viewer-wrapper {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  #canvas-container {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    background: linear-gradient(135deg, rgba(47, 82, 51, 0.05), rgba(226, 166, 59, 0.05));
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid var(--line);
+    box-shadow: 0 20px 60px rgba(43, 32, 19, 0.1);
+  }
+
+  .canvas-info {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: rgba(255, 253, 246, 0.95);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+
+  /* Product Info Panel */
+  .product-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .product-info {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .product-info h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .product-info .category {
+    font-size: 13px;
+    color: var(--mustard);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+
+  .product-info .price {
+    font-family: 'Fredoka';
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--clay);
+    margin-bottom: 12px;
+  }
+
+  .product-info .desc {
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .specs {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+
+  .spec-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    margin-bottom: 10px;
+  }
+
+  .spec-item strong {
+    color: var(--forest-dark);
+  }
+
+  .spec-item span {
+    color: var(--ink-soft);
+  }
+
+  /* Product Selector */
+  .product-selector {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .product-selector h3 {
+    font-size: 16px;
+    margin-bottom: 14px;
+  }
+
+  .product-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .product-btn {
+    padding: 12px 16px;
+    border: 2px solid var(--line);
+    background: transparent;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+
+  .product-btn:hover {
+    border-color: var(--forest);
+    color: var(--forest-dark);
+  }
+
+  .product-btn.active {
+    background: var(--forest);
+    color: #fff;
+    border-color: var(--forest);
+  }
+
+  /* Controls */
+  .controls {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .controls h3 {
+    font-size: 16px;
+    margin-bottom: 14px;
+  }
+
+  .control-group {
+    margin-bottom: 16px;
+  }
+
+  .control-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--forest-dark);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .control-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .control-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 10px;
+    border: 1.5px solid var(--line);
+    background: transparent;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    transition: all 0.2s ease;
+  }
+
+  .control-btn:hover {
+    border-color: var(--forest);
+    color: var(--forest-dark);
+  }
+
+  .control-btn.active {
+    background: var(--mustard);
+    border-color: var(--mustard);
+    color: #3a2a0c;
+  }
+
+  /* Call to Action */
+  .cta-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--clay);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    background: #95401f;
+  }
+
+  .info-note {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  footer {
+    background: var(--forest-dark);
+    color: #EFE7D3;
+    padding: 30px 0 20px;
+    margin-top: 60px;
+    text-align: center;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="#" class="brand">
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="23" fill="#2F5233"/>
+        <ellipse cx="24" cy="29" rx="10" ry="8" fill="#F1E4C8"/>
+        <ellipse cx="14.5" cy="18" rx="4" ry="5" fill="#F1E4C8"/>
+        <ellipse cx="33.5" cy="18" rx="4" ry="5" fill="#F1E4C8"/>
+        <ellipse cx="18" cy="12" rx="3" ry="4" fill="#F1E4C8"/>
+        <ellipse cx="30" cy="12" rx="3" ry="4" fill="#F1E4C8"/>
+      </svg>
+      <span class="brand-text">
+        <span class="name">Sikar Pet Shop</span>
+        <span class="tag">3D Product Viewer</span>
+      </span>
+    </a>
+  </div>
+</header>
+
+<main>
+  <section class="viewer-section">
+    <div class="wrap">
+      <h1 style="font-size: 34px; margin-bottom: 30px;">3D Products — Rotate &amp; Zoom</h1>
+      
+      <div class="viewer-wrapper">
+        <!-- 3D Canvas -->
+        <div id="canvas-container">
+          <canvas id="3d-canvas"></canvas>
+          <div class="canvas-info">
+            🖱️ Drag to rotate • 🔄 Scroll to zoom
+          </div>
+        </div>
+
+        <!-- Product Info & Controls -->
+        <div class="product-panel">
+          <div class="product-info">
+            <div class="category" id="category">Dog Food</div>
+            <h2 id="product-name">Adult Dog Dry Food</h2>
+            <div class="price" id="product-price">₹499</div>
+            <p class="desc" id="product-desc">Premium chicken &amp; rice formula, perfect for medium to large breed dogs.</p>
+            
+            <div class="specs">
+              <div class="spec-item">
+                <strong>Size:</strong> <span id="spec-size">3kg / 10kg</span>
+              </div>
+              <div class="spec-item">
+                <strong>Protein:</strong> <span id="spec-protein">25%</span>
+              </div>
+              <div class="spec-item">
+                <strong>Brand:</strong> <span id="spec-brand">Premium Brand</span>
+              </div>
+              <div class="spec-item">
+                <strong>Availability:</strong> <span style="color: #2F5233; font-weight: 700;">In Stock</span>
+              </div>
+            </div>
+
+            <div class="cta-section">
+              <button class="btn-primary">Order Ab Karein</button>
+              <p class="info-note">Sikar mein same-day delivery available</p>
+            </div>
+          </div>
+
+          <!-- Product Selector -->
+          <div class="product-selector">
+            <h3>Products</h3>
+            <div class="product-list">
+              <button class="product-btn active" data-product="dog-food">🐕 Dog Food</button>
+              <button class="product-btn" data-product="cat-food">🐱 Cat Food</button>
+              <button class="product-btn" data-product="collar">🎀 Collar &amp; Leash</button>
+              <button class="product-btn" data-product="litter">🚽 Cat Litter</button>
+              <button class="product-btn" data-product="bird-food">🐦 Bird Food</button>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="controls">
+            <h3>View Controls</h3>
+            <div class="control-group">
+              <label>Rotation Speed</label>
+              <div class="control-buttons">
+                <button class="control-btn" id="speed-slow">Slow</button>
+                <button class="control-btn active" id="speed-normal">Normal</button>
+                <button class="control-btn" id="speed-fast">Fast</button>
+              </div>
+            </div>
+            <div class="control-group">
+              <label>Lighting</label>
+              <div class="control-buttons">
+                <button class="control-btn active" id="light-default">Default</button>
+                <button class="control-btn" id="light-bright">Bright</button>
+                <button class="control-btn" id="light-dark">Dark</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>© 2026 Sikar Pet Shop • Premium 3D Product Viewer • <strong>+91 98765 43210</strong></p>
+  </div>
+</footer>
+
+<script>
+// Three.js Setup
+let scene, camera, renderer, product;
+let rotationSpeed = 0.005;
+let isDragging = false;
+let dragX = 0, dragY = 0;
+let targetRotationX = 0, targetRotationY = 0;
+
+const products = {
+  'dog-food': {
+    name: 'Adult Dog Dry Food',
+    category: 'Dog Food',
+    price: '₹499',
+    desc: 'Premium chicken & rice formula, perfect for medium to large breed dogs.',
+    size: '3kg / 10kg',
+    protein: '25%',
+    brand: 'Premium Brand',
+    color: 0xE2A63B,
+    shape: 'bag'
+  },
+  'cat-food': {
+    name: 'Kitten Wet Food Pouch',
+    category: 'Cat Food',
+    price: '₹360',
+    desc: 'Soft texture, tuna and chicken flavour pouches for growing kittens.',
+    size: '80g x 6 pouches',
+    protein: '12%',
+    brand: 'Nutrition Plus',
+    color: 0xF1E4C8,
+    shape: 'pouch'
+  },
+  'collar': {
+    name: 'Nylon Collar & Leash Set',
+    category: 'Accessories',
+    price: '₹299',
+    desc: 'Adjustable, reflective strip, comfortable for all dog sizes.',
+    size: 'Small to Large',
+    protein: 'N/A',
+    brand: 'SafePets',
+    color: 0xAE4E2C,
+    shape: 'collar'
+  },
+  'litter': {
+    name: 'Cat Litter (Clumping)',
+    category: 'Accessories',
+    price: '₹450',
+    desc: 'Low-dust, odour control, easy scoop formula for cat hygiene.',
+    size: '5kg',
+    protein: 'N/A',
+    brand: 'CleanPaws',
+    color: 0xD4A574,
+    shape: 'box'
+  },
+  'bird-food': {
+    name: 'Parrot & Budgie Seed Mix',
+    category: 'Bird Food',
+    price: '₹180',
+    desc: 'Millet, sunflower and oats mix, nutritious daily feed.',
+    size: '1kg',
+    protein: '14%',
+    brand: 'NatureSeeds',
+    color: 0xE8C547,
+    shape: 'bag'
+  }
+};
+
+function initThreeJS() {
+  const container = document.getElementById('canvas-container');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xfaf3e4);
+  scene.fog = new THREE.Fog(0xfaf3e4, 100, 1000);
+
+  camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+  camera.position.z = 5;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambientLight);
+
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  directionalLight.position.set(5, 10, 5);
+  directionalLight.castShadow = true;
+  scene.add(directionalLight);
+
+  const pointLight = new THREE.PointLight(0xE2A63B, 0.4);
+  pointLight.position.set(-5, 3, 3);
+  scene.add(pointLight);
+
+  // Create initial product
+  createProduct('dog-food');
+
+  // Event Listeners
+  renderer.domElement.addEventListener('mousedown', onMouseDown);
+  renderer.domElement.addEventListener('mousemove', onMouseMove);
+  renderer.domElement.addEventListener('mouseup', onMouseUp);
+  renderer.domElement.addEventListener('wheel', onMouseWheel, false);
+
+  window.addEventListener('resize', onWindowResize);
+
+  // Product selector
+  document.querySelectorAll('.product-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.product-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const productId = btn.getAttribute('data-product');
+      changeProduct(productId);
+    });
+  });
+
+  // Speed controls
+  document.getElementById('speed-slow').addEventListener('click', () => {
+    rotationSpeed = 0.002;
+    updateSpeedButtons('slow');
+  });
+  document.getElementById('speed-normal').addEventListener('click', () => {
+    rotationSpeed = 0.005;
+    updateSpeedButtons('normal');
+  });
+  document.getElementById('speed-fast').addEventListener('click', () => {
+    rotationSpeed = 0.01;
+    updateSpeedButtons('fast');
+  });
+
+  // Lighting controls
+  document.getElementById('light-default').addEventListener('click', () => {
+    scene.fog.color.setHex(0xfaf3e4);
+    updateLightingButtons('default');
+  });
+  document.getElementById('light-bright').addEventListener('click', () => {
+    scene.fog.color.setHex(0xffffff);
+    updateLightingButtons('bright');
+  });
+  document.getElementById('light-dark').addEventListener('click', () => {
+    scene.fog.color.setHex(0xe0d5c0);
+    updateLightingButtons('dark');
+  });
+
+  animate();
+}
+
+function createProduct(productId) {
+  if (product) scene.remove(product);
+
+  const productData = products[productId];
+  const group = new THREE.Group();
+
+  let geometry;
+  switch(productData.shape) {
+    case 'bag':
+      geometry = new THREE.BoxGeometry(1.5, 2.5, 0.8);
+      break;
+    case 'pouch':
+      geometry = new THREE.BoxGeometry(0.8, 1.5, 0.3);
+      break;
+    case 'collar':
+      geometry = new THREE.TorusGeometry(1, 0.2, 16, 32);
+      break;
+    case 'litter':
+      geometry = new THREE.BoxGeometry(1.8, 1.8, 1.2);
+      break;
+    case 'box':
+      geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+      break;
+    default:
+      geometry = new THREE.BoxGeometry(1, 2, 0.5);
+  }
+
+  const material = new THREE.MeshStandardMaterial({
+    color: productData.color,
+    metalness: 0.3,
+    roughness: 0.6,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  scene.add(group);
+  product = group;
+
+  updateProductInfo(productId);
+}
+
+function changeProduct(productId) {
+  createProduct(productId);
+  targetRotationX = 0;
+  targetRotationY = 0;
+}
+
+function updateProductInfo(productId) {
+  const data = products[productId];
+  document.getElementById('category').textContent = data.category;
+  document.getElementById('product-name').textContent = data.name;
+  document.getElementById('product-price').textContent = data.price;
+  document.getElementById('product-desc').textContent = data.desc;
+  document.getElementById('spec-size').textContent = data.size;
+  document.getElementById('spec-protein').textContent = data.protein;
+  document.getElementById('spec-brand').textContent = data.brand;
+}
+
+function updateSpeedButtons(speed) {
+  document.querySelectorAll('#speed-slow, #speed-normal, #speed-fast').forEach(btn => btn.classList.remove('active'));
+  if (speed === 'slow') document.getElementById('speed-slow').classList.add('active');
+  if (speed === 'normal') document.getElementById('speed-normal').classList.add('active');
+  if (speed === 'fast') document.getElementById('speed-fast').classList.add('active');
+}
+
+function updateLightingButtons(light) {
+  document.querySelectorAll('#light-default, #light-bright, #light-dark').forEach(btn => btn.classList.remove('active'));
+  if (light === 'default') document.getElementById('light-default').classList.add('active');
+  if (light === 'bright') document.getElementById('light-bright').classList.add('active');
+  if (light === 'dark') document.getElementById('light-dark').classList.add('active');
+}
+
+function onMouseDown(e) {
+  isDragging = true;
+  dragX = e.clientX;
+  dragY = e.clientY;
+}
+
+function onMouseMove(e) {
+  if (isDragging) {
+    const deltaX = e.clientX - dragX;
+    const deltaY = e.clientY - dragY;
+    targetRotationY += deltaX * 0.01;
+    targetRotationX += deltaY * 0.01;
+    dragX = e.clientX;
+    dragY = e.clientY;
+  }
+}
+
+function onMouseUp() {
+  isDragging = false;
+}
+
+function onMouseWheel(e) {
+  e.preventDefault();
+  camera.position.z += e.deltaY * 0.005;
+  camera.position.z = Math.max(2, Math.min(15, camera.position.z));
+}
+
+function onWindowResize() {
+  const container = document.getElementById('canvas-container');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (product) {
+    product.rotation.x += (targetRotationX - product.rotation.x) * 0.1;
+    product.rotation.y += (targetRotationY - product.rotation.y) * 0.1;
+    
+    if (!isDragging) {
+      product.rotation.y += rotationSpeed;
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+// Initialize
+window.addEventListener('load', initThreeJS);
+</script>
+
+</body>
+</html>
